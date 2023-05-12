@@ -122,6 +122,7 @@ class HC_SR04:
 
 if __name__ == "__main__":
   print('HC-SR04 ultrasonic distance sensor - class test example')
+  GPIO.setwarnings(False)
   GPIO.setmode(GPIO.BCM)  # use BCM pin numbers
 
   TRIG_PIN = 23

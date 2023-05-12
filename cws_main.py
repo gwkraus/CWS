@@ -1,27 +1,70 @@
 #!/usr/bin/env python3
 
+#-------------------------------------------------------------------------------
+#
+# Filename: cws_main.py
+#
+# Description: This is the main project file for the Chicken Watering System 
+#           (CWS) Stem project. The objectives of this project are:
+#           * monitor the water volume remaining in the system
+#           * provide an alert when the remaining water volume becomes critically
+#             low
+#           * provide alerts when the temperature of the CWS environment becomes
+#             excessively hot or cold
+#           * provide metrics about water consumption rate over time
+#           * estimate time of next 'water critically low' event
+#           * provide historical water refill times and amounts
+#           * provide a user interface that will display current system status 
+#             refill data, and graph of water consumption over time
+#
+# Author: Greg Kraus
+#
+# History:  20230512 Initial work started
+#
+#-------------------------------------------------------------------------------
+
+import os
+import sys
+import time
+
 import RPi.GPIO as GPIO
-import chronodot as cdot
-import hall_sensor as hall
-import hc_sr04 as ranger
-import logger
+from chronodot import DS3231
+from hall_sensor import HALL_SENSOR
+from hc_sr04 import HC_SR04
+from bme28_sensor import BME280_WRAPPER
+from logger import LOGGER
 
-WATER_OUT_PIN = 11111
-RANGE_TRIGGER_PIN = 22222
-RANGE_ECHO_PIN = 33333
+# Configure GPIO
+GPIO.setwarnings(False)
+GPIO.setmode(GPIO.BCM)  # use BCM pin numbers
 
+# Create system sensor objects
+
+rtc = DS3231()
+temp_sensor = BME280_WRAPPER
+
+RANGE_TRIGGER_PIN = 23
+RANGE_ECHO_PIN = 24
+ranger = HC_SR04(RANGE_TRIGGER_PIN)
+
+LED_PIN = 25
+status_led = LED(LED_PIN)
+
+HALL_SENSOR_PIN = 21
+water_out_sensor = HALL_SENSOR(HALL_SENSOR_PIN)
+
+# initialize logging
 logfile_name = 'cws_log.txt'
 log = logger(logfile_name)
 
-rtc = cdot.DS3231()
-temp_sensor = temp.bmp280()
-water_out = hall.hall_sensor(WATER_OUT_PIN)
-range_sensor = ranger.HC_SR04(RANGE_TRIGGER_PIN, RANGE_ECHO_PIN)
+# set some system parameters
+MEASUREMENT_INTERVAL_MINUTES  5
 
-WATER_LEVEL_FULL = 111.222   # range measurement from sensor to full water level
-WATER_LEVEL_EMPTY = 333.444  # range measurement from sensor to WATER_OUT_LEVEL
-NUMBER_OF_BUCKETS = 2
-BUCKET_RADIUS = 11.22
+WATER_LEVEL_FULL_DISTANCE = 111.222   # range measurement from sensor to full water level
+WATER_LEVEL_EMPTY_DISTANCE = 333.444  # range measurement from sensor to WATER_OUT_LEVEL
+NUMBER_OF_WATER_BUCKETS = 2
+BUCKET_CAPACITY_LITERS = 5 * 3.875
+BUCKET_RADIUS_CM = 1234
 
 # Calulate the system's total water capacity
 # volume = height * (pi * r^2)
@@ -35,10 +78,29 @@ BUCKET_RADIUS = 11.22
 # keep updated "empty time prediction" based on each updated reading
 # plot 'capacity versus time' for previous week
 
-set_interval_alarm()
-while 1:
+status = {}
 
-  wait_for_interval_alarm()
+# create initial display
+
+while 1:
+  # update system status
+  
+  # write system status to database
+  
+  # update display
+  
+  # go into sleep mode until next update is needed
+  next_update_timestamp = ts_monotonic() + (MEASUREMENT_INVERVAL+_MINUTES * 60)
+  
+  while next_update_timestamp > ts_monotonic():
+    status_led.toggle()
+    time.sleep(0.05)
+    status_led.toggle()
+    time_sleep(1.95)
+    
+
+#-------------------------------------------------------------------------------
+# Initial thoughts and todo list while prototyping
 
   update_display_alarm(water_out.get_sensor_state())
   tempC = temp_sensor.get_temp_celcius()
