@@ -82,12 +82,23 @@ class DS3231:
       # convert to bcd format
       data = [self.bcdToBinary(x) for x in reg_data]
       #print( data )
+      
       return data
 
   #-----------------------------------------
 
+  def get_timestamp(self):
+      data = self.get_date_time()
+      ts = time.strptime(str(self), '%Y-%m-%d %H:%M:%S')
+      timestamp = int(time.mktime(ts))
+
+      return timestamp                          
+  
+  #-----------------------------------------
+
   def bcdToBinary(self, data):
       return (data//16) * 10 + (data%16)
+      
   #-----------------------------------------
 
   def BinaryToBCD(self, data):
@@ -113,6 +124,8 @@ if __name__ == '__main__':
     while( 1 ):
       print("time: " + time.ctime() )
       print("rtc: " + str(rtc))
+      rtc_timestamp = rtc.get_timestamp()
+      print('rtc timestamp: ' + str(rtc_timestamp))
       time.sleep( 2 )
   except KeyboardInterrupt:
     pass   # Ctrl-C to exit program
