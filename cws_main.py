@@ -30,8 +30,9 @@ import time
 import RPi.GPIO as GPIO
 from chronodot import DS3231
 from hall_sensor import HALL_SENSOR
-from hc_sr04 import HC_SR04
-from bme28_sensor import BME280_WRAPPER
+from hc_sr04_sensor import HC_SR04
+from bme280_sensor import BME280_WRAPPER
+from led import LED
 from logger import LOGGER
 
 # Configure GPIO
@@ -41,30 +42,30 @@ GPIO.setmode(GPIO.BCM)  # use BCM pin numbers
 # Create system sensor objects
 
 rtc = DS3231()
-temp_sensor = BME280_WRAPPER
+temp_sensor = BME280_WRAPPER()
 
 RANGE_TRIGGER_PIN = 23
 RANGE_ECHO_PIN = 24
-ranger = HC_SR04(RANGE_TRIGGER_PIN)
+ranger = HC_SR04(RANGE_TRIGGER_PIN, RANGE_ECHO_PIN)
 
 LED_PIN = 25
-status_led = LED(LED_PIN)
+status_led = LED(LED_PIN, True)
 
 HALL_SENSOR_PIN = 21
 water_out_sensor = HALL_SENSOR(HALL_SENSOR_PIN)
 
 # initialize logging
 logfile_name = 'cws_log.txt'
-log = logger(logfile_name)
+log = LOGGER(logfile_name)
 
 # set some system parameters
-MEASUREMENT_INTERVAL_MINUTES  5
+MEASUREMENT_INTERVAL_SECONDS = 10
 
-WATER_LEVEL_FULL_DISTANCE = 111.222   # range measurement from sensor to full water level
-WATER_LEVEL_EMPTY_DISTANCE = 333.444  # range measurement from sensor to WATER_OUT_LEVEL
+WATER_LEVEL_FULL_DISTANCE_CM = 5.4   # range measurement from sensor to full water level
+WATER_LEVEL_EMPTY_DISTANCE_CM = 37.4  # range measurement from sensor to WATER_OUT_LEVEL
 NUMBER_OF_WATER_BUCKETS = 2
 BUCKET_CAPACITY_LITERS = 5 * 3.875
-BUCKET_RADIUS_CM = 1234
+BUCKET_RADIUS_CM = (10.75 / 2) * 2.54
 
 # Calulate the system's total water capacity
 # volume = height * (pi * r^2)
@@ -83,23 +84,41 @@ status = {}
 # create initial display
 
 while 1:
+  # set next update timestamp
+  next_update_timestamp = rtc.get_timestamp() + MEASUREMENT_INTERVAL_SECONDS
+  print('\n****** {} ******'.format(rtc))
   # update system status
+  status['time'] = rtc.get_date_time()
+  status['bme'] = temp_sensor.read() 
+  status['range'] = ranger.calc_distance( status['bme']['temp'] )
   
   # write system status to database
   
   # update display
+
+  print( temp_sensor )
+  water_height = WATER_LEVEL_EMPTY_DISTANCE_CM - status['range']
+  if water_height < 0:
+    water_height = 0.01
+  water_volume = water_height * BUCKET_RADIUS_CM * BUCKET_RADIUS_CM * 3.1415927 / 1000  
+  print('Water height = {:.1f} cm   Volume = {:.2f} L'.format( water_height, water_volume))
+  print( water_out_sensor )
   
   # go into sleep mode until next update is needed
-  next_update_timestamp = ts_monotonic() + (MEASUREMENT_INVERVAL+_MINUTES * 60)
-  
-  while next_update_timestamp > ts_monotonic():
-    status_led.toggle()
-    time.sleep(0.05)
-    status_led.toggle()
-    time_sleep(1.95)
+
+  skip = False
+  while next_update_timestamp > rtc.get_timestamp():
+    skip = True if not skip else False
+    if not skip:
+        status_led.toggle()
+        time.sleep(0.05)
+        status_led.toggle()
+        time.sleep(0.95)
+    else:
+        time.sleep(1)
     
 
-#-------------------------------------------------------------------------------
+'''#-------------------------------------------------------------------------------
 # Initial thoughts and todo list while prototyping
 
   update_display_alarm(water_out.get_sensor_state())
@@ -118,4 +137,4 @@ while 1:
 
   update_display( tempC, water_volume_remaining, pct_full )
   update_plot()
-
+'''
